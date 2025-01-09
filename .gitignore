@@ -1,0 +1,25 @@
+# Ignore build files
+*.bin
+*.elf
+*.hex
+*.eep
+
+# Ignore temporary files
+*.ino~
+*.tmp
+
+# Arduino IDE build folder
+build/
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore libraries if not specific to the project
+libraries/
+
+# Log files
+*.log
+
+# Ignore Visual Studio Code settings (if using VS Code)
+.vscode/
