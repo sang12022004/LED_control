@@ -21,6 +21,9 @@ int brightness = 100;                      // Độ sáng LED (0-255)
 
 void setup() {
   Serial.begin(115200);                    // Khởi động Serial Monitor
+  // Khởi tạo dải LED
+  strip.begin();
+  strip.show();  // Tắt tất cả LED ban đầu
   delay(3000);
   // put your setup code here, to run once:
   // Kết nối Wi-Fi
@@ -32,27 +35,26 @@ void setup() {
   // Lặp để chờ kết nối Wi-Fi
   while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT) {
     Serial.print(".");
+    setAllPixels(hexToColor("#FFD700"));    // Màu vàng
     delay(500);
   }
 
   // Kiểm tra kết quả sau khi hết thời gian chờ
   if (WiFi.status() == WL_CONNECTED) {
+    setAllPixels(hexToColor("#008001"));    // Màu xanh lá cây
     Serial.println("\nWi-Fi connected!");
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
   } else {
+    setAllPixels(hexToColor("#FF0000"));    // Màu đỏ
     Serial.println("\nFailed to connect to Wi-Fi.");
    
   }
-  
-  // Khởi tạo dải LED
-  strip.begin();
-  strip.show();  // Tắt tất cả LED ban đầu
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  updateLED();
+  
 }
 
 // Hàm cập nhật LED dựa trên các giá trị trạng thái, màu sắc và độ sáng
