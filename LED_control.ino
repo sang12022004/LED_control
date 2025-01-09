@@ -1,10 +1,16 @@
 #include <ESP8266WiFi.h>
 #include <Adafruit_NeoPixel.h>
 
+// WiFi thông tin
+#define WIFI_SSID "Phong107"                // Tên mạng Wi-Fi
+#define WIFI_PASSWORD "hoanghuy1234"        // Mật khẩu Wi-Fi
+
+// Thời gian tối đa để chờ kết nối Wi-Fi (tính bằng mili giây)
+const unsigned long WIFI_TIMEOUT = 20000; // 20 giây
+
 // Chân điều khiển LED và số lượng LED trên dải NeoPixel
 #define PIN D6                              // Chân GPIO nối với dải LED
 #define NUMPIXELS 16                        // Tổng số LED trong dải
-
 
 // Đối tượng NeoPixel để điều khiển LED
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
@@ -14,7 +20,31 @@ String color = "#FFFFFF";                  // Mã màu LED dưới dạng hex
 int brightness = 100;                      // Độ sáng LED (0-255)
 
 void setup() {
+  Serial.begin(115200);                    // Khởi động Serial Monitor
+  delay(3000);
   // put your setup code here, to run once:
+  // Kết nối Wi-Fi
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.print("Connecting to Wi-Fi");
+
+  unsigned long startAttemptTime = millis(); // Lấy thời gian bắt đầu
+  
+  // Lặp để chờ kết nối Wi-Fi
+  while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT) {
+    Serial.print(".");
+    delay(500);
+  }
+
+  // Kiểm tra kết quả sau khi hết thời gian chờ
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nWi-Fi connected!");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("\nFailed to connect to Wi-Fi.");
+   
+  }
+  
   // Khởi tạo dải LED
   strip.begin();
   strip.show();  // Tắt tất cả LED ban đầu
