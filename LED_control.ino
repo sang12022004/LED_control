@@ -1,9 +1,11 @@
 #include <ESP8266WiFi.h>
+#include <WiFiUdp.h>
 #include <Adafruit_NeoPixel.h>
+#include <ArduinoJson.h>
 
-// WiFi thông tin
-#define WIFI_SSID "Phong107"                // Tên mạng Wi-Fi
-#define WIFI_PASSWORD "hoanghuy1234"        // Mật khẩu Wi-Fi
+//WiFi AP
+const char* apSSID = "LED16_control";         // Tên mạng Wi-Fi Access Point
+const char* apPassword = "12345678";       // Mật khẩu Access Point
 
 // Thời gian tối đa để chờ kết nối Wi-Fi (tính bằng mili giây)
 const unsigned long WIFI_TIMEOUT = 20000; // 20 giây
@@ -15,46 +17,64 @@ const unsigned long WIFI_TIMEOUT = 20000; // 20 giây
 // Đối tượng NeoPixel để điều khiển LED
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
-bool status = 0;                     // Trạng thái đèn: 1 hoặc 0
+bool status = 1;                     // Trạng thái đèn: 1 hoặc 0
 String color = "#FFFFFF";                  // Mã màu LED dưới dạng hex
 int brightness = 100;                      // Độ sáng LED (0-255)
 
 void setup() {
   Serial.begin(115200);                    // Khởi động Serial Monitor
+  delay(3000);
   // Khởi tạo dải LED
   strip.begin();
   strip.show();  // Tắt tất cả LED ban đầu
-  delay(3000);
-  // put your setup code here, to run once:
-  // Kết nối Wi-Fi
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Connecting to Wi-Fi");
+  // 1. Khởi tạo Access Point
+  WiFi.softAP(apSSID, apPassword);
+  IPAddress ip = WiFi.softAPIP();
+  Serial.println("Access Point đã được tạo:");
+  Serial.print("SSID: ");
+  Serial.println(apSSID);
+  Serial.print("Password: ");
+  Serial.println(apPassword);
+  Serial.print("IP Address: ");
+  Serial.println(ip);
 
-  unsigned long startAttemptTime = millis(); // Lấy thời gian bắt đầu
-  
-  // Lặp để chờ kết nối Wi-Fi
-  while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT) {
-    Serial.print(".");
-    setAllPixels(hexToColor("#FFD700"));    // Màu vàng
-    delay(500);
-  }
-
-  // Kiểm tra kết quả sau khi hết thời gian chờ
-  if (WiFi.status() == WL_CONNECTED) {
-    setAllPixels(hexToColor("#008001"));    // Màu xanh lá cây
-    Serial.println("\nWi-Fi connected!");
-    Serial.print("IP Address: ");
-    Serial.println(WiFi.localIP());
-  } else {
-    setAllPixels(hexToColor("#FF0000"));    // Màu đỏ
-    Serial.println("\nFailed to connect to Wi-Fi.");
-   
-  }
+//  // Kết nối Wi-Fi
+//  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+//  Serial.print("Connecting to Wi-Fi");
+//
+//  unsigned long startAttemptTime = millis(); // Lấy thời gian bắt đầu
+//  
+//  // Lặp để chờ kết nối Wi-Fi
+//  while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT) {
+//    Serial.print(".");
+//    // Chớp nháy đèn vàng
+//    setAllPixels(hexToColor("#FFD700"));  // Màu vàng
+//    delay(500);
+//    setAllPixels(hexToColor("#000000"));  // Tắt LED
+//    delay(500);
+//  }
+//
+//  // Kiểm tra kết quả sau khi hết thời gian chờ
+//  if (WiFi.status() == WL_CONNECTED) {
+//    setAllPixels(hexToColor("#008001"));    // Màu xanh lá cây
+//    Serial.println("\nWi-Fi connected!");
+//    Serial.print("IP Address: ");
+//    Serial.println(WiFi.localIP());
+//    delay(3000);                            // Giữ đèn xanh trong 3 giây
+//  } else {
+//    setAllPixels(hexToColor("#FF0000"));    // Màu đỏ
+//    Serial.println("\nFailed to connect to Wi-Fi.");
+//    delay(3000);                            // Giữ đèn đỏ trong 3 giây
+//  }
+//
+//  // Sau đó tắt đèn để chuyển sang xử lý khác
+//  setAllPixels(hexToColor("#000000"));      // Tắt tất cả LED
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  
+  // Tiếp tục xử lý khác trong vòng lặp
+  updateLED();
+  delay(20000);
 }
 
 // Hàm cập nhật LED dựa trên các giá trị trạng thái, màu sắc và độ sáng
