@@ -25,6 +25,12 @@ void loop() {
 
 }
 
+uint32_t hexToColor(String hex) {
+  if (hex.charAt(0) != '#' || hex.length() != 7) return strip.Color(0, 0, 0); // Trả về màu đen nếu mã màu không hợp lệ
+  long number = strtol(&hex[1], NULL, 16);  // Chuyển từ chuỗi hex sang số
+  return strip.Color((number >> 16) & 0xFF, (number >> 8) & 0xFF, number & 0xFF);
+}
+
 // Hàm đặt màu cho tất cả LED trong dải
 void setAllPixels(uint32_t color) {
   for (int i = 0; i < NUMPIXELS; i++) {     // Duyệt qua từng LED
