@@ -37,6 +37,7 @@ void setup() {
 
 void loop() {
   handleUDPMessage();
+  
 }
 
 // **1. Khởi tạo Access Point**
@@ -146,4 +147,17 @@ void setAllPixels(uint32_t color) {
     strip.setPixelColor(i, color);
   }
   strip.show();
+}
+
+// **9. Hàm cập nhật LED dựa trên trạng thái, màu sắc, và độ sáng**
+void updateLED(bool ledStatus, String hexColor, int brightness) {
+  if (ledStatus) {                            // Nếu trạng thái là bật
+    strip.setBrightness(brightness);          // Cập nhật độ sáng
+    setAllPixels(hexToColor(hexColor));       // Cập nhật màu sắc
+    Serial.println("LED is ON.");
+  } else {                                    // Nếu trạng thái là tắt
+    strip.clear();                            // Tắt tất cả LED
+    strip.show();
+    Serial.println("LED is OFF.");
+  }
 }
