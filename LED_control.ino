@@ -9,8 +9,8 @@
 // Đối tượng NeoPixel để điều khiển LED
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
-bool status = 0;                     // Trạng thái đèn: "ON" hoặc "OFF"
-String color = "#000000";                  // Mã màu LED dưới dạng hex
+bool status = 0;                     // Trạng thái đèn: 1 hoặc 0
+String color = "#FFFFFF";                  // Mã màu LED dưới dạng hex
 int brightness = 100;                      // Độ sáng LED (0-255)
 
 void setup() {
@@ -22,9 +22,23 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-
+  updateLED();
 }
 
+// Hàm cập nhật LED dựa trên các giá trị trạng thái, màu sắc và độ sáng
+void updateLED() {
+  if (status) {                     // Nếu trạng thái là 1
+    strip.setBrightness(brightness);        // Cập nhật độ sáng
+    setAllPixels(hexToColor(color));        // Cập nhật màu sắc
+    Serial.println("LED is ON.");
+  } else {                                  // Nếu trạng thái là 0
+    strip.clear();                          // Tắt tất cả LED
+    strip.show();
+    Serial.println("LED is OFF.");
+  }
+}
+
+// Hàm chuyển mã màu hex thành giá trị RGB
 uint32_t hexToColor(String hex) {
   if (hex.charAt(0) != '#' || hex.length() != 7) return strip.Color(0, 0, 0); // Trả về màu đen nếu mã màu không hợp lệ
   long number = strtol(&hex[1], NULL, 16);  // Chuyển từ chuỗi hex sang số
