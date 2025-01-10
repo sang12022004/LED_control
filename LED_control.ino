@@ -1,6 +1,7 @@
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <Adafruit_NeoPixel.h>
+#include <WebSocketsClient.h>
 #include <ArduinoJson.h>
 
 // WiFi AP
@@ -14,9 +15,16 @@ WiFiUDP udp;                                // Đối tượng UDP
 const unsigned int udpPort = 4210;          // Cổng UDP ESP sẽ lắng nghe
 char incomingPacket[255];                   // Bộ đệm để lưu dữ liệu nhận được
 
+// Cấu hình WebSocket
+String WS_HOST   = "192.168.170.173"; 
+uint16_t WS_PORT = 4000;          
+String WS_PATH   = "/?deviceId=7"; // Tuỳ ý
+
 // Chân điều khiển LED và số lượng LED trên dải NeoPixel
 #define PIN D6                              // Chân GPIO nối với dải LED
 #define NUMPIXELS 16                        // Tổng số LED trong dải
+
+WebSocketsClient webSocket;   // Tạo đối tượng WebSocket
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
@@ -36,9 +44,12 @@ void setup() {
 }
 
 void loop() {
-  handleUDPMessage();
-  
+  handleUDPMessage();  // Xử lý tin nhắn UDP
+  if (WiFi.status() == WL_CONNECTED) {
+    webSocket.loop();  // Duy trì kết nối WebSocket
+  }
 }
+
 
 // **1. Khởi tạo Access Point**
 void setupAccessPoint() {
@@ -74,10 +85,16 @@ void handleUDPMessage() {
     String ssid = parseValue(receivedData, "SSID");
     String password = parseValue(receivedData, "PASSWORD");
 
+    if (ssid.isEmpty() || password.isEmpty()) {
+      Serial.println("[UDP] Invalid data, missing SSID or PASSWORD");
+      return;
+    }
+
     Serial.print("SSID nhận được: ");
     Serial.println(ssid);
     Serial.print("Password nhận được: ");
     Serial.println(password);
+
 
     connectToWiFi(ssid, password); // Kết nối tới Wi-Fi
   }
@@ -114,13 +131,15 @@ void handleLEDStatus(String status) {
   if (status == "CONNECTING") {
     setAllPixels(hexToColor("#FFD700"));  // Màu vàng
     delay(500);
-    setAllPixels(hexToColor("#000000"));  // Tắt LED
+    strip.clear();
+    strip.show();  // Tắt LED
   } else if (status == "CONNECTED") {
     setAllPixels(hexToColor("#008001"));  // Màu xanh lá cây
   } else if (status == "FAILED") {
     setAllPixels(hexToColor("#FF0000"));  // Màu đỏ
   } else if (status == "OFF") {
-    setAllPixels(hexToColor("#000000"));  // Tắt tất cả LED
+    strip.clear();  // Tắt tất cả LED
+    strip.show();
   }
 }
 
@@ -159,5 +178,85 @@ void updateLED(bool ledStatus, String hexColor, int brightness) {
     strip.clear();                            // Tắt tất cả LED
     strip.show();
     Serial.println("LED is OFF.");
+  }
+}
+
+// **10 Callback WebSocket khi có event
+void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
+  switch(type) {
+    case WStype_DISCONNECTED:
+      Serial.println("[WS] Disconnected");
+      break;
+
+    case WStype_CONNECTED:
+      Serial.println("[WS] Connected to server");
+      break;
+
+    case WStype_TEXT: {
+      // Server gửi chuỗi JSON
+      Serial.printf("[WS] Received: %s\n", payload);
+
+      // Parse JSON
+      DynamicJsonDocument doc(256);
+      DeserializationError err = deserializeJson(doc, payload);
+      
+      if (err) {
+        Serial.println("[WS] JSON parse error");
+        Serial.print("[WS] Error details: ");
+        Serial.println(err.c_str());
+        return;
+      }
+
+      // { "action": "toggle", "powerStatus": true, "color": "#FF0000", "brightness": 80 }
+      String action     = doc["action"]     | "";
+      bool powerStatus  = doc["powerStatus"] | false;
+      String newColor   = doc["color"]      | "#FFFFFF";
+      int newBright     = doc["brightness"] | 100;
+
+      if (action == "toggle") {
+        ledPower     = powerStatus;
+        ledColor     = newColor; 
+        ledBrightness= newBright; 
+        updateLED();
+        Serial.printf("[WS] Toggle LED -> Power=%s, Color=%s, Brightness=%d\n",
+                      (ledPower ? "ON" : "OFF"), ledColor.c_str(), ledBrightness);
+      }
+      else if (action == "updateAttributes") {
+        ledPower     = true;
+        ledColor     = newColor; 
+        ledBrightness= newBright; 
+        updateLED();
+        Serial.printf("[WS] Toggle LED -> Power=%s, Color=%s, Brightness=%d\n",
+                      (ledPower ? "ON" : "OFF"), ledColor.c_str(), ledBrightness);
+      }
+      else {
+        Serial.println("[WS] Unknown action");
+      }
+
+    } break;
+
+    default:
+      // WStype_BIN, WStype_ERROR, ...
+      break;
+  }
+}
+
+
+// **11 Khởi tạo WebSocket
+void startWebSocket() {
+  webSocket.onEvent(webSocketEvent);
+  webSocket.begin(WS_HOST.c_str(), WS_PORT, WS_PATH.c_str());
+  webSocket.setReconnectInterval(5000);  // Tự động reconnect mỗi 5 giây
+  unsigned long startTime = millis();
+
+  while (!webSocket.isConnected() && millis() - startTime < 10000) { // Timeout sau 10 giây
+    webSocket.loop();
+    delay(100);
+  }
+
+  if (webSocket.isConnected()) {
+    Serial.println("[WS] WebSocket connected");
+  } else {
+    Serial.println("[WS] WebSocket connection failed");
   }
 }
